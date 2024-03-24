@@ -472,7 +472,7 @@ router.get("/detail/:slug", async (req, res) => {
 
 //chapter detail ----done ----
 router.get("/chapter/:endpoint", async (req, res) => {
-  const url = "https://komikindo.pro/";
+  const url = "https://mangakita.id/";
   const endpoint = req.params.endpoint;
   // res.send(endpoint)
   try {
