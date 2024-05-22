@@ -687,8 +687,8 @@ router.get("/genre/:slug/:pagenumber?", async (req, res) => {
 
   const pagenumber = req.params.pagenumber;
   const url = pagenumber
-    ? `https://mangakita.net/genres/${slug}/page/${pagenumber}`
-    : `https://mangakita.net/genres/${slug}`;
+    ? `https://mangakita.net/manga/?page=${pagenumber}&genre%5B%5D=${slug}`
+    : `https://mangakita.net/manga/?genre%5B%5D=${slug}`;
 
   try {
     const response = await AxiosService(url);
