@@ -8,7 +8,6 @@ const replaceMangaPage2 = [
 ];
 const AxiosService = require("../helpers/axiosService");
 
-//mangalist  -------Done------
 router.get("/chapter/:endpoint", async (req, res) => {
   const url = "https://mangakita.id/";
   const endpoint = req.params.endpoint;
@@ -17,22 +16,47 @@ router.get("/chapter/:endpoint", async (req, res) => {
     const response = await AxiosService(`${url}${endpoint}/`);
     const $ = cheerio.load(response.data);
     
-    // Ambil gambar dari #readerarea
-    const chapterImages = [];
-    $("#readerarea img.ts-main-image").each((index, img) => {
-      chapterImages.push($(img).attr("src"));
+    // Scrape chapter title
+    const chapterTitle = $("h1.entry-title").text().trim();
+    
+    // Scrape the chapter description if needed
+    const chapterDesc = $(".chdesc p").text().trim();
+
+    // Scrape chapter navigation links
+    const chapters = [];
+    $("select[name='chapter'] option").each((index, option) => {
+      const chapterUrl = $(option).val();
+      const chapterLabel = $(option).text();
+      chapters.push({ label: chapterLabel, url: chapterUrl });
+    });
+
+    // Scrape previous and next chapter navigation
+    const prevChapter = $(".ch-prev-btn").attr("href");
+    const nextChapter = $(".ch-next-btn").attr("href");
+
+    // Scrape images
+    const images = [];
+    $("#readerarea .ts-main-image").each((index, img) => {
+      const imgSrc = $(img).attr("src");
+      images.push(imgSrc);
     });
 
     res.json({
       status: true,
-      images: chapterImages,
+      title: chapterTitle,
+      description: chapterDesc,
+      chapters: chapters,
+      prevChapter: prevChapter,
+      nextChapter: nextChapter,
+      images: images // Include the image list in the response
     });
   } catch (error) {
     console.log(error);
-    res.send({
+    res.json({
       status: false,
-      message: error,
-      images: [],
+      message: error.message,
+      chapters: [],
+      images: [] // Return empty array if error occurs
     });
   }
 });
