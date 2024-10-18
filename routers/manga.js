@@ -9,6 +9,33 @@ const replaceMangaPage2 = [
 const AxiosService = require("../helpers/axiosService");
 
 //mangalist  -------Done------
+router.get("/chapter/:endpoint", async (req, res) => {
+  const url = "https://mangakita.id/";
+  const endpoint = req.params.endpoint;
+
+  try {
+    const response = await AxiosService(`${url}${endpoint}/`);
+    const $ = cheerio.load(response.data);
+    
+    // Ambil gambar dari #readerarea
+    const chapterImages = [];
+    $("#readerarea img.ts-main-image").each((index, img) => {
+      chapterImages.push($(img).attr("src"));
+    });
+
+    res.json({
+      status: true,
+      images: chapterImages,
+    });
+  } catch (error) {
+    console.log(error);
+    res.send({
+      status: false,
+      message: error,
+      images: [],
+    });
+  }
+});
 
 // Route baru untuk mengambil data dari Komikcast
 router.get("/test", async (req, res) => {
@@ -521,67 +548,6 @@ router.get("/detail/:slug", async (req, res) => {
     res.send({
       status: false,
       message: error,
-    });
-  }
-});
-
-router.get("/chapter/:endpoint", async (req, res) => {
-  const url = "https://mangakita.id/";
-  const endpoint = req.params.endpoint;
-
-  try {
-    const response = await AxiosService(`${url}${endpoint}/`);
-    const $ = cheerio.load(response.data);
-    const content = $("#content");
-    let chapter_image = [];
-    const obj = {};
-    
-    obj.chapter_endpoint = endpoint + "/";
-    obj.chapter_name = endpoint.split("-").join(" ").trim();
-    obj.title = $("#content h1").text().trim();
-    obj.next = false;
-    obj.prev = "";
-    
-    if ($("#content .navig a:nth-child(4)").text()) {
-      obj.next = $("#content .navig a:nth-child(4)")
-        .attr("href")
-        .replace("https://komikindo.pro/", "");
-    }
-    if ($("#content .navig a:nth-child(2)").text()) {
-      obj.prev = $("#content .navig a:nth-child(1)")
-        .attr("href")
-        .replace("https://komikindo.pro/", "");
-    }
-    
-    obj.chapter_list = $("#content .navig a:nth-child(2)")
-      .attr("href")
-      .replace("https://komikindo.pro/komik/", "");
-    obj.download = $("#content .navig a:nth-child(3)")
-      .attr("href")
-      .replace("https://komikindo.pro/komik/", "");
-    obj.image = $(".seriestucontent > .seriestucontl > .thumb")
-      .find("img")
-      .attr("src");
-
-    // Ambil gambar dari <div id="readerarea">
-    const getPages = $("#readerarea img.ts-main-image");
-
-    obj.chapter_pages = getPages.length;
-    getPages.each((i, el) => {
-      chapter_image.push({
-        chapter_image_link: $(el).attr("src"),
-        image_number: i + 1,
-      });
-    });
-    
-    obj.chapter_image = chapter_image;
-    res.json(obj);
-  } catch (error) {
-    console.log(error);
-    res.send({
-      status: false,
-      message: error,
-      chapter_image: [],
     });
   }
 });
