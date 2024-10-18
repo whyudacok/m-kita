@@ -525,25 +525,23 @@ router.get("/detail/:slug", async (req, res) => {
   }
 });
 
-//chapter detail ----done ----
 router.get("/chapter/:endpoint", async (req, res) => {
   const url = "https://mangakita.id/";
   const endpoint = req.params.endpoint;
-  // res.send(endpoint)
+
   try {
     const response = await AxiosService(`${url}${endpoint}/`);
-    // const response = await axios.get(`https://komikcast.id/${endpoint}`)
     const $ = cheerio.load(response.data);
     const content = $("#content");
     let chapter_image = [];
     const obj = {};
+    
     obj.chapter_endpoint = endpoint + "/";
     obj.chapter_name = endpoint.split("-").join(" ").trim();
-
     obj.title = $("#content h1").text().trim();
-
     obj.next = false;
     obj.prev = "";
+    
     if ($("#content .navig a:nth-child(4)").text()) {
       obj.next = $("#content .navig a:nth-child(4)")
         .attr("href")
@@ -554,6 +552,7 @@ router.get("/chapter/:endpoint", async (req, res) => {
         .attr("href")
         .replace("https://komikindo.pro/", "");
     }
+    
     obj.chapter_list = $("#content .navig a:nth-child(2)")
       .attr("href")
       .replace("https://komikindo.pro/komik/", "");
@@ -564,15 +563,17 @@ router.get("/chapter/:endpoint", async (req, res) => {
       .find("img")
       .attr("src");
 
-    const getPages = $("#chimg-auh img");
+    // Ambil gambar dari <div id="readerarea">
+    const getPages = $("#readerarea img.ts-main-image");
 
     obj.chapter_pages = getPages.length;
     getPages.each((i, el) => {
       chapter_image.push({
-        chapter_image_link: $(el).attr("src").replace("i0.wp.com/", ""),
+        chapter_image_link: $(el).attr("src"),
         image_number: i + 1,
       });
     });
+    
     obj.chapter_image = chapter_image;
     res.json(obj);
   } catch (error) {
