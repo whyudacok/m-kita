@@ -13,58 +13,64 @@ router.get("/chapter/:endpoint", async (req, res) => {
   const endpoint = req.params.endpoint;
 
   try {
-    // Ambil konten HTML halaman
+    // Ambil konten halaman utama dan link JSON dalam satu request menggunakan AxiosService
     const response = await AxiosService(`${url}${endpoint}/`);
-    const $ = cheerio.load(response.data);
+    
+    // Pastikan status response adalah 200
+    if (response.status === 200) {
+      const $ = cheerio.load(response.data);
 
-    // Ambil judul halaman
-    const pageTitle = $('title').first().text() || '';
+      // Ambil judul halaman
+      const pageTitle = $('title').first().text() || '';
 
-    // Ambil teks H1
-    const h1Text = $('h1.entry-title').first().text() || '';
+      // Ambil teks H1
+      const h1Text = $('h1.entry-title').first().text() || '';
 
-    // Ambil bagian "All chapters"
-    const allcElement = $('div.allc').first();
-    const allcText = allcElement.text().replace('All chapters are in', '').trim() || '';
-    const allcLink = allcElement.find('a').attr('href') ? allcElement.find('a').attr('href').replace('https://mangakita.id/', '') : '';
+      // Ambil bagian "All chapters"
+      const allcElement = $('div.allc').first();
+      const allcText = allcElement.text().replace('All chapters are in', '').trim() || '';
+      const allcLink = allcElement.find('a').attr('href') ? allcElement.find('a').attr('href').replace('https://mangakita.id/', '') : '';
 
-    // Ambil link JSON
-    const jsonLink = $('link[type="application/json"]').attr('href');
-    if (!jsonLink) {
-      return res.json({
+      // Ambil link JSON
+      const jsonLink = $('link[type="application/json"]').attr('href');
+      if (!jsonLink) {
+        return res.status(400).json({
+          status: false,
+          message: "JSON link not found",
+          chapters: [],
+          images: []
+        });
+      }
+
+      // Gabungkan konten dari JSON di dalam response halaman
+      const jsonData = JSON.parse(response.data); // Parsing langsung dari halaman yang diambil dengan AxiosService
+      const contentRendered = jsonData.content.rendered;
+
+      // Parse konten yang dirender untuk gambar
+      const contentHtml = cheerio.load(contentRendered);
+      const imageElements = contentHtml('img').map((i, el) => contentHtml(el).attr('src')).get();
+
+      // Kirim respons dalam bentuk JSON
+      return res.status(200).json({
+        status: true,
+        title: pageTitle,
+        h1: h1Text,
+        allcText: allcText,
+        allcLink: allcLink,
+        images: imageElements
+      });
+
+    } else {
+      return res.status(response.status).json({
         status: false,
-        message: "JSON link not found",
+        message: "Failed to fetch page data",
         chapters: [],
         images: []
       });
     }
 
-    // Ambil konten JSON
-    const jsonResponse = await axios.get(jsonLink, {
-      headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:89.0) Gecko/20100101 Firefox/89.0'
-      }
-    });
-
-    const jsonData = jsonResponse.data;
-    const contentRendered = jsonData.content.rendered;
-
-    // Parse konten yang dirender untuk gambar
-    const contentHtml = cheerio.load(contentRendered);
-    const imageElements = contentHtml('img').map((i, el) => contentHtml(el).attr('src')).get();
-
-    // Kirim respons dalam bentuk JSON
-    res.json({
-      status: true,
-      title: pageTitle,
-      h1: h1Text,
-      allcText: allcText,
-      allcLink: allcLink,
-      images: imageElements
-    });
-
   } catch (error) {
-    res.json({
+    return res.status(500).json({
       status: false,
       message: error.message || "An error occurred",
       chapters: [],
@@ -72,6 +78,7 @@ router.get("/chapter/:endpoint", async (req, res) => {
     });
   }
 });
+
 
 
 // Route baru untuk mengambil data dari Komikcast
