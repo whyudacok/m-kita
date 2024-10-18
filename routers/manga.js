@@ -9,6 +9,61 @@ const replaceMangaPage2 = [
 const AxiosService = require("../helpers/axiosService");
 
 //mangalist  -------Done------
+
+// Route baru untuk mengambil data dari Komikcast
+router.get("/test", async (req, res) => {
+  const url = "https://komikcast.one";
+  try {
+    const response = await AxiosService(url);
+    if (response.status === 200) {
+      const $ = cheerio.load(response.data);
+      const mangaList = [];
+
+      // Parsing elemen .post-item
+      $(".post-item").each((idx, el) => {
+        const title = $(el).find(".post-item-title h4").text().trim();
+        const image = $(el).find(".limietles img").attr("src");
+        const link = $(el).find(".post-item-box a").attr("href");
+        const rating = $(el).find(".fas.fa-star").parent().text().trim();
+        const type = $(el).find(".flag-country-type").text().trim();
+        const views = $(el).find(".far.fa-eye").parent().text().trim();
+        const status = $(el).find(".status-post-item").text().trim();
+        const latestChapter = $(el)
+          .find(".list-ch-post-item-bx .lsch a")
+          .first()
+          .text()
+          .trim();
+        const latestChapterLink = $(el)
+          .find(".list-ch-post-item-bx .lsch a")
+          .first()
+          .attr("href");
+
+        mangaList.push({
+          title,
+          image,
+          link,
+          rating,
+          type,
+          views,
+          status,
+          latestChapter,
+          latestChapterLink,
+        });
+      });
+
+      res.status(200).json({
+        status: true,
+        message: "success",
+        data: mangaList,
+      });
+    } else {
+      res.status(response.status).send({ message: "Failed to fetch data" });
+    }
+  } catch (error) {
+    res.status(500).send({ message: error.message });
+  }
+});
+
 router.get("/mangaku", async (req, res) => {
   let url = "https://mangaku.vip";
 
