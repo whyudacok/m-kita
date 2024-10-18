@@ -13,53 +13,66 @@ router.get("/chapter/:endpoint", async (req, res) => {
   const endpoint = req.params.endpoint;
 
   try {
+    // Ambil konten HTML halaman
     const response = await AxiosService(`${url}${endpoint}/`);
     const $ = cheerio.load(response.data);
-    
-    // Scrape chapter title
-    const chapterTitle = $("h1.entry-title").text().trim();
-    
-    // Scrape the chapter description if needed
-    const chapterDesc = $(".chdesc p").text().trim();
 
-    // Scrape chapter navigation links
-    const chapters = [];
-    $("select[name='chapter'] option").each((index, option) => {
-      const chapterUrl = $(option).val();
-      const chapterLabel = $(option).text();
-      chapters.push({ label: chapterLabel, url: chapterUrl });
+    // Ambil judul halaman
+    const pageTitle = $('title').first().text() || '';
+
+    // Ambil teks H1
+    const h1Text = $('h1.entry-title').first().text() || '';
+
+    // Ambil bagian "All chapters"
+    const allcElement = $('div.allc').first();
+    const allcText = allcElement.text().replace('All chapters are in', '').trim() || '';
+    const allcLink = allcElement.find('a').attr('href') ? allcElement.find('a').attr('href').replace('https://mangakita.id/', '') : '';
+
+    // Ambil link JSON
+    const jsonLink = $('link[type="application/json"]').attr('href');
+    if (!jsonLink) {
+      return res.json({
+        status: false,
+        message: "JSON link not found",
+        chapters: [],
+        images: []
+      });
+    }
+
+    // Ambil konten JSON
+    const jsonResponse = await axios.get(jsonLink, {
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:89.0) Gecko/20100101 Firefox/89.0'
+      }
     });
 
-    // Scrape previous and next chapter navigation
-    const prevChapter = $(".ch-prev-btn").attr("href");
-    const nextChapter = $(".ch-next-btn").attr("href");
+    const jsonData = jsonResponse.data;
+    const contentRendered = jsonData.content.rendered;
 
-    // Scrape images
-    const images = [];
-    $("#readerarea .ts-main-image").each((index, img) => {
-      const imgSrc = $(img).attr("src");
-      images.push(imgSrc);
-    });
+    // Parse konten yang dirender untuk gambar
+    const contentHtml = cheerio.load(contentRendered);
+    const imageElements = contentHtml('img').map((i, el) => contentHtml(el).attr('src')).get();
 
+    // Kirim respons dalam bentuk JSON
     res.json({
       status: true,
-      title: chapterTitle,
-      description: chapterDesc,
-      chapters: chapters,
-      prevChapter: prevChapter,
-      nextChapter: nextChapter,
-      images: images // Include the image list in the response
+      title: pageTitle,
+      h1: h1Text,
+      allcText: allcText,
+      allcLink: allcLink,
+      images: imageElements
     });
+
   } catch (error) {
-    console.log(error);
     res.json({
       status: false,
-      message: error.message,
+      message: error.message || "An error occurred",
       chapters: [],
-      images: [] // Return empty array if error occurs
+      images: [] // Kembalikan array kosong jika terjadi kesalahan
     });
   }
 });
+
 
 // Route baru untuk mengambil data dari Komikcast
 router.get("/test", async (req, res) => {
